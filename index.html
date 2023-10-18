@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script
+      src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"
+      crossorigin="anonymous"
+    ></script>
+    <title>Landmark Accuracy</title>
+    <link rel="stylesheet" href="style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+          "OBJLoader": "https://unpkg.com/three@0.157.0/examples/jsm/loaders/OBJLoader.js"
+        }
+      }
+    </script>
+  </head>
+
+  <body>
+    <header>
+      <img src="assets/logo_white.svg" alt="logo" id="logo" />
+    </header>
+    <main>
+      <div class="container">
+        <div class="file_container">
+          <label class="custom_file_button" for="imageInput1"
+            >Upload Image</label
+          >
+          <input
+            type="file"
+            id="imageInput1"
+            class="custom_file_input"
+            accept="images/*"
+          />
+          <label class="custom_file_button" for="imageInput2"
+            >Upload 3D Mesh</label
+          >
+          <input
+            type="file"
+            id="imageInput2"
+            class="custom_file_input"
+            accept=".obj"
+          />
+        </div>
+        <div class="canvas_container">
+          <canvas
+            class="output_canvas"
+            id="canvas1"
+            width="400"
+            height="400"
+          ></canvas>
+          <canvas class="webgl_canvas" id="canvas2" width="400" height="400">
+          </canvas>
+          <div class="webglContainer"></div>
+        </div>
+        <h3 class="result">Landmarks are not calculated yet.</h3>
+        <button class="collapsible">Click for Details</button>
+        <div class="content">
+          <pre id="detailed_results"></pre>
+        </div>
+      </div>
+    </main>
+
+    <footer>Copyright ⓒ 2023 Insighter Corp. All Rights Reserved.</footer>
+
+    <script type="module" src="renderer.js"></script>
+  </body>
+</html>

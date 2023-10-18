@@ -1,0 +1,103 @@
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+header {
+  padding: 10px;
+  background-color: #333;
+}
+
+main {
+  display: flex;
+}
+
+#logo {
+  height: 30px;
+  padding-inline: 10px;
+}
+
+.container {
+  flex: 1;
+  overflow: hidden;
+  text-align: center;
+  margin: 30px;
+}
+
+.file_container {
+  display: flex;
+  justify-content: center;
+  margin: 20px;
+}
+
+.custom_file_input {
+  display: none;
+}
+
+.custom_file_button {
+  display: inline-block;
+  padding: 10px 15px;
+  margin: 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.custom_file_button:hover {
+  background-color: #0056b3;
+}
+
+.canvas_container {
+  display: flex;
+  justify-content: center;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+}
+
+canvas {
+  margin-inline: 20px;
+}
+
+.collapsible {
+  background-color: #f1f1f1;
+  color: #444;
+  cursor: pointer;
+  padding: 18px;
+  width: 100%;
+  border: none;
+  text-align: left;
+  outline: none;
+  font-size: 15px;
+  transition: 0.4s;
+}
+
+.collapsible:hover {
+  background-color: #ddd;
+}
+
+.content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease-out;
+  background-color: #f1f1f1;
+  padding: 0 18px;
+}
+
+.content pre {
+  white-space: pre-wrap; /* to wrap the text in the pre tag */
+}
+
+footer {
+  background-color: #333;
+  color: white;
+  text-align: center;
+  padding: 10px;
+  position: fixed;
+  width: 100%;
+  bottom: 0;
+}
