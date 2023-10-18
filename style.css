@@ -63,6 +63,10 @@ canvas {
   margin-inline: 20px;
 }
 
+#webgl_canvas {
+  display: none;
+}
+
 .collapsible {
   background-color: #f1f1f1;
   color: #444;

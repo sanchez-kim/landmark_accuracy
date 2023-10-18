@@ -13,7 +13,6 @@
   "author": "Sanchez Kim",
   "license": "ISC",
   "dependencies": {
-    "@mediapipe/face_mesh": "^0.4.1633559619",
     "electron": "^27.0.0",
     "electron-package": "^0.1.0",
     "three": "^0.157.0",

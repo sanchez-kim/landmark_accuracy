@@ -2,17 +2,19 @@ import * as THREE from "three";
 import { OBJLoader } from "OBJLoader";
 
 const scene = new THREE.Scene();
-const aspectRatio = canvas2.width / canvas2.height;
+const canvas = document.getElementById("webgl_canvas");
+const aspectRatio = canvas.width / canvas.height;
 const renderer = new THREE.WebGLRenderer({
-  canvas: document.getElementById("canvas2"),
+  canvas: canvas,
 });
-renderer.setSize(canvas2.width, canvas2.height);
+renderer.setSize(canvas.width, canvas.height);
 renderer.setClearColor(0xffffff);
-document.querySelector(".webglContainer").appendChild(renderer.domElement);
 
+// change camera info
 const camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
-camera.position.z = 2;
-camera.fov = 36;
+camera.position.y = 8;
+camera.position.z = 30;
+camera.fov = 15;
 camera.updateProjectionMatrix();
 
 const light = new THREE.DirectionalLight(0xffffff, 2.0);
@@ -20,52 +22,108 @@ light.position.set(1, 1, 1).normalize();
 scene.add(light);
 
 window.addEventListener("resize", function () {
-  const newAspectRatio = canvas2.width / canvas2.height;
+  const newAspectRatio = canvas.width / canvas.height;
   camera.aspect = newAspectRatio;
   camera.updateProjectionMatrix();
-  renderer.setSize(canvas2.width, canvas2.height);
+  renderer.setSize(canvas.width, canvas.height);
 });
 
 const loader = new OBJLoader();
 
-let landmarks1, landmarks2;
-let processingImage1 = true;
-let storedImage1 = null;
+let faceMesh = null;
+let landmarks1 = null;
+let landmarks2 = null;
+let canvasCtx = null;
+let isImageCanvas = null;
+let storedImage = null;
 
-const canvasElement1 = document.getElementById("canvas1");
-const canvasCtx1 = canvasElement1.getContext("2d");
+const imgCanvas = document.getElementById("image_canvas");
+const imgCtx = imgCanvas.getContext("2d");
+
+const renderCanvas = document.getElementById("render_canvas");
+const renderCtx = renderCanvas.getContext("2d");
+
+const faceDetection = new FaceDetection({
+  locateFile: (file) => {
+    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`;
+  },
+});
+
+faceDetection.setOptions({
+  model: "short",
+  maxNumFaces: 1, // Detect only one face
+  minDetectionConfidence: 0.5,
+});
+
+faceDetection.onResults(onFaceDetectionResults);
+
+function onFaceDetectionResults(results) {
+  if (results.detections) {
+    const faceBox = results.detections[0].boundingBox;
+
+    const croppedFace = cropFaceFromImage(faceBox);
+
+    faceMesh
+      .send({ image: croppedFace })
+      .then(() => {})
+      .catch((err) => {
+        console.error("Error in faceMesh.send: ", err);
+      });
+  }
+}
+function cropFaceFromImage(faceBox, offset = 0.2) {
+  const sourceWidth = imgCanvas.width;
+  const sourceHeight = imgCanvas.height;
+  let x = (faceBox.xCenter - faceBox.width / 2) * sourceWidth;
+  let y = (faceBox.yCenter - faceBox.height / 2) * sourceHeight;
+  let width = faceBox.width * sourceWidth;
+  let height = faceBox.height * sourceHeight;
+
+  const xOffset = width * offset;
+  const yOffset = height * offset;
+
+  x = Math.max(0, x - xOffset);
+  y = Math.max(0, y - yOffset);
+  width = Math.min(sourceWidth - x, width + 2 * xOffset);
+  height = Math.min(sourceHeight - y, height + 2 * yOffset);
+
+  const croppedCanvas = document.createElement("canvas");
+  const croppedCtx = croppedCanvas.getContext("2d");
+
+  croppedCanvas.width = width;
+  croppedCanvas.height = height;
+  croppedCtx.drawImage(imgCanvas, x, y, width, height, 0, 0, width, height);
+
+  imgCtx.clearRect(0, 0, imgCanvas.width, imgCanvas.height);
+  imgCtx.drawImage(croppedCanvas, 0, 0, sourceWidth, sourceHeight);
+
+  return imgCanvas;
+}
 
 function onResults(results) {
-  const canvasElement2 = document.getElementById("canvas2");
-  const canvasCtx2 = canvasElement2.getContext("2d");
-  console.log(processingImage1);
-  let canvasCtx = processingImage1 ? canvasCtx1 : canvasCtx2;
-  let canvasElement = processingImage1 ? canvasElement1 : canvasElement2;
-  console.log("onResults result: ", results);
-  console.log("canvasCtx: ", canvasCtx);
-  canvasCtx.save();
-  canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-  if (results && results.image) {
-    canvasCtx.drawImage(
-      results.image,
-      0,
-      0,
-      canvasElement.width,
-      canvasElement.height
-    );
-  } else {
-    console.error("results.image is not defined", results);
-  }
-
   if (
     results &&
     results.multiFaceLandmarks &&
     results.multiFaceLandmarks.length > 0
   ) {
-    if (processingImage1) {
+    if (isImageCanvas) {
+      canvasCtx = imgCtx;
       landmarks1 = results.multiFaceLandmarks[0];
     } else {
+      console.log("Doing render context");
+      canvasCtx = renderCtx;
       landmarks2 = results.multiFaceLandmarks[0];
+      try {
+        canvasCtx.drawImage(
+          storedImage,
+          0,
+          0,
+          renderCanvas.width,
+          renderCanvas.height
+        );
+      } catch (error) {
+        console.error("Error drawing Mesh: ", error);
+      }
     }
     for (const landmarks of results.multiFaceLandmarks) {
       drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION, {
@@ -93,73 +151,48 @@ function onResults(results) {
       drawConnectors(canvasCtx, landmarks, FACEMESH_FACE_OVAL, {
         color: "#E0E0E0",
       });
-      drawConnectors(canvasCtx, landmarks, FACEMESH_LIPS, { color: "#E0E0E0" });
+      drawConnectors(canvasCtx, landmarks, FACEMESH_LIPS, {
+        color: "#E0E0E0",
+      });
     }
+  } else {
+    console.error("No results!");
   }
   canvasCtx.restore();
 }
 
-function processImage(file, canvasCtx, canvasElement, callback) {
+function processImage(file, callback) {
   const image = new Image();
   image.src = URL.createObjectURL(file);
 
   image.onload = function () {
+    imgCtx.clearRect(0, 0, imgCanvas.width, imgCanvas.height);
+    imgCtx.drawImage(image, 0, 0, imgCanvas.width, imgCanvas.height);
     try {
-      canvasCtx.drawImage(
-        image,
-        0,
-        0,
-        canvasElement.width,
-        canvasElement.height
-      );
-      storedImage1 = canvasCtx.getImageData(
-        0,
-        0,
-        canvasElement.width,
-        canvasElement.height
-      );
-
-      faceMesh.send({ image: canvasElement }).then(callback);
+      faceDetection.send({ image: image });
     } catch (error) {
-      console.error("Error from faceMesh.send: ", error);
+      console.error("Error from faceDetection.send: ", error);
     }
   };
 }
 
-// function renderFrontalImage() {
-//   renderer.render(scene, camera);
-
-//   // Create an offscreen canvas
-//   const offscreenCanvas = document.createElement("canvas");
-//   offscreenCanvas.width = renderer.domElement.width;
-//   offscreenCanvas.height = renderer.domElement.height;
-//   const offscreenCtx = offscreenCanvas.getContext("2d");
-
-//   // Draw the renderer's domElement onto the offscreen canvas
-//   offscreenCtx.drawImage(renderer.domElement, 0, 0);
-
-//   faceMesh.send({ image: offscreenCanvas }).then((results) => {
-//     onResults(results, true, canvasCtx2, canvasElement2);
-//     compareLandmarks();
-//   });
-// }
-
 function canvasToImage(canvas) {
+  const dataURL = canvas.toDataURL("image/png");
   const image = new Image();
-  image.src = canvas.toDataURL("image/png");
+  image.src = dataURL;
   return image;
 }
 
 function renderFrontalImage() {
   renderer.render(scene, camera);
-
+  renderCtx.clearRect(0, 0, renderCanvas.width, renderCanvas.height);
   const image = canvasToImage(renderer.domElement);
-  image.onload = function () {
-    faceMesh.send({ image: image }).then((landmarks) => {
-      landmarks2 = landmarks;
+  storedImage = image;
+  if (faceMesh) {
+    faceMesh.send({ image: image }).then(() => {
       compareLandmarks();
     });
-  };
+  }
 }
 
 function compareLandmarks() {
@@ -192,29 +225,39 @@ function compareLandmarks() {
   }
 }
 
-const faceMesh = new FaceMesh({
-  locateFile: (file) => {
-    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
-  },
-});
-faceMesh.setOptions({
-  maxNumFaces: 1,
-  refineLandmarks: true,
-  minDetectionConfidence: 0.5,
-  minTrackingConfidence: 0.5,
-});
-faceMesh.onResults(onResults);
+function resetFaceMesh() {
+  if (faceMesh) {
+    faceMesh.close();
+  }
+  faceMesh = new FaceMesh({
+    locateFile: (file) => {
+      return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+    },
+  });
 
-document.getElementById("imageInput1").addEventListener("change", function () {
-  processingImage1 = true;
-  processImage(this.files[0], canvasCtx1, canvasElement1, () => {
-    // onResults(results, false, canvasCtx1, canvasElement1);
+  faceMesh.setOptions({
+    maxNumFaces: 1,
+    refineLandmarks: true,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5,
+  });
+
+  faceMesh.onResults(onResults);
+}
+
+resetFaceMesh();
+
+document.getElementById("imageInput").addEventListener("change", function () {
+  isImageCanvas = true;
+  processImage(this.files[0], () => {
     compareLandmarks();
   });
 });
 
-document.getElementById("imageInput2").addEventListener("change", function () {
-  processingImage1 = false;
+document.getElementById("objInput").addEventListener("change", function () {
+  resetFaceMesh();
+  console.log("Obj canvas triggered");
+  isImageCanvas = false;
   const file = this.files[0];
   const reader = new FileReader();
 
@@ -227,12 +270,12 @@ document.getElementById("imageInput2").addEventListener("change", function () {
   reader.readAsDataURL(file);
 });
 
-// document.querySelector(".collapsible").addEventListener("click", function () {
-//   this.classList.toggle("active");
-//   let content = this.nextElementSibling;
-//   if (content.style.maxHeight) {
-//     content.style.maxHeight = null;
-//   } else {
-//     content.style.maxHeight = content.scrollHeight + "px";
-//   }
-// });
+document.querySelector(".collapsible").addEventListener("click", function () {
+  this.classList.toggle("active");
+  let content = this.nextElementSibling;
+  if (content.style.maxHeight) {
+    content.style.maxHeight = null;
+  } else {
+    content.style.maxHeight = content.scrollHeight + "px";
+  }
+});
