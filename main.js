@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, ipcMain, session } = require("electron");
 const path = require("path");
 
 let mainWindow;
@@ -20,6 +20,8 @@ app.whenReady().then(() => {
     mainWindow = null;
   });
 });
+
+// app.disableHardwareAcceleration();
 
 app.on("window-all-closed", function () {
   if (process.platform !== "darwin") app.quit();
