@@ -1,3 +1,5 @@
 # Landmark Accuracy Checker
 
-- obj의 origin이 다르다면 카메라 위치나 오브젝트의 위치를 조정해야함
+- node v16.16.0에서 테스트함
+- `npm install`로 패키지 설치
+- `npm run start` 로 프로그램 실행
