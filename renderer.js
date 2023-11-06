@@ -13,12 +13,12 @@ renderer.setClearColor(0xffffff);
 
 // change camera info
 const camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
-camera.position.set(0, 4, 24);
-camera.fov = 80;
+camera.position.set(0, 0, 18);
+camera.fov = 5;
 camera.updateProjectionMatrix();
 
 const light = new THREE.DirectionalLight(0xffffff, 2.0);
-light.position.set(1, 1, 1).normalize();
+light.position.set(1, 1, 1);
 scene.add(light);
 
 window.addEventListener("resize", function () {
