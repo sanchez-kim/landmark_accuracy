@@ -184,21 +184,53 @@ function onResults(results) {
 }
 
 function processImage(file, callback) {
-  const image = new Image();
-  image.src = URL.createObjectURL(file);
+  // Convert the image file to a buffer for sharp processing
+  const reader = new FileReader();
 
-  image.onload = function () {
-    imgCtx.clearRect(0, 0, imgCanvas.width, imgCanvas.height);
-    imgCtx.drawImage(image, 0, 0, imgCanvas.width, imgCanvas.height);
-    try {
-      faceDetection.send({ image: image }).then((results) => {
-        callback();
+  reader.onloadend = function () {
+    const arrayBuffer = reader.result;
+
+    // Use the exposed function to rotate the image
+    window.imageProcessing
+      .rotateImage(arrayBuffer)
+      .then((rotatedBuffer) => {
+        // Create a new Blob from the rotated buffer
+        const blob = new Blob([rotatedBuffer], { type: "image/jpeg" });
+        const rotatedImageURL = URL.createObjectURL(blob);
+
+        const rotatedImage = new Image();
+        rotatedImage.src = rotatedImageURL;
+
+        rotatedImage.onload = function () {
+          // Draw the rotated image onto the canvas
+          imgCtx.clearRect(0, 0, imgCanvas.width, imgCanvas.height);
+          imgCtx.drawImage(
+            rotatedImage,
+            0,
+            0,
+            imgCanvas.width,
+            imgCanvas.height
+          );
+
+          try {
+            // Now send the rotated image for face detection
+            faceDetection.send({ image: rotatedImage }).then((results) => {
+              callback(results); // Make sure to pass the results back to the callback
+            });
+          } catch (error) {
+            console.error("Error from faceDetection.send: ", error);
+            callback(null, error); // Pass the error to the callback
+          }
+        };
+      })
+      .catch((error) => {
+        console.error("Error rotating image:", error);
+        callback(null, error); // Pass the error to the callback if rotation fails
       });
-    } catch (error) {
-      console.error("Error from faceDetection.send: ", error);
-      callback();
-    }
   };
+
+  // Read the file as an ArrayBuffer
+  reader.readAsArrayBuffer(file);
 }
 
 async function canvasToImage(canvas) {
