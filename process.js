@@ -1,9 +1,14 @@
-import * as THREE from "three";
-import { OBJLoader } from "OBJLoader";
-
+// set scene
 const scene = new THREE.Scene();
-const canvas = document.getElementById("webgl_canvas");
+
+// set canvas
+const canvas = document.createElement("canvas");
+document.body.appendChild(canvas);
+canvas.width = 500;
+canvas.height = 500;
 const aspectRatio = canvas.width / canvas.height;
+
+// renderer
 const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
 });
@@ -13,27 +18,15 @@ renderer.setClearColor(0xffffff);
 // camera info
 const camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
 camera.position.set(0, 0, 18);
-camera.fov = 5;
+camera.fov = 6;
 camera.updateProjectionMatrix();
 
 // lighting options
 const light = new THREE.DirectionalLight(0xffffff, 1.0);
-light.position.set(0, 0, 1);
+light.position.set(1, 1, 1).normalize();
 scene.add(light);
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.05);
-scene.add(ambientLight);
-
-window.addEventListener("resize", function () {
-  const newAspectRatio = canvas.width / canvas.height;
-  camera.aspect = newAspectRatio;
-  camera.updateProjectionMatrix();
-  renderer.setSize(canvas.width, canvas.height);
-});
-
-const loader = new OBJLoader();
-
-let faceMesh = null;
+let faceMesh;
 let landmarks1 = null;
 let landmarks2 = null;
 let canvasCtx = null;
@@ -42,43 +35,69 @@ let storedImage = null;
 let currentCtx;
 
 // set up canvas and context for image processing
-const imgCanvas = document.getElementById("image_canvas");
+const imgCanvas = document.createElement("canvas");
+document.body.appendChild(imgCanvas);
+imgCanvas.width = 500;
+imgCanvas.height = 500;
 const imgCtx = imgCanvas.getContext("2d");
-const renderCanvas = document.getElementById("render_canvas");
+const renderCanvas = document.createElement("canvas");
+renderCanvas.width = 500;
+renderCanvas.height = 500;
 const renderCtx = renderCanvas.getContext("2d");
 
-const faceDetection = new FaceDetection({
+// set up face detection
+async function initializeFaceDetection() {
+  const faceDetection = new FaceDetection({
+    locateFile: (file) => {
+      return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/${file}`;
+    },
+  });
+
+  faceDetection.setOptions({
+    model: "short",
+    maxNumFaces: 1,
+    minDetectionConfidence: 0.5,
+  });
+
+  faceDetection.onResults(onFaceDetectionResults);
+
+  return faceDetection;
+}
+
+// set up face mesh
+faceMesh = new FaceMesh({
   locateFile: (file) => {
-    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`;
+    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`;
   },
 });
 
-faceDetection.setOptions({
-  model: "short",
-  maxNumFaces: 1, // Detect only one face
+faceMesh.setOptions({
+  maxNumFaces: 1,
+  refineLandmarks: true,
   minDetectionConfidence: 0.5,
+  minTrackingConfidence: 0.5,
 });
 
-faceDetection.onResults(onFaceDetectionResults);
+faceMesh.onResults(onResults);
 
 // after detecting a face, crop the image to the face and send it to the face mesh
 function onFaceDetectionResults(results) {
-  let canvas, ctx;
+  let canvasTemp, ctxTemp;
   console.log(currentCtx);
-  if (currentCtx === "REAL") {
-    canvas = imgCanvas;
-    ctx = imgCtx;
-  } else if (currentCtx === "RENDERED") {
-    canvas = renderCanvas;
-    ctx = renderCtx;
+  if (currentCtx === "image") {
+    canvasTemp = imgCanvas;
+    ctxTemp = imgCtx;
+  } else if (currentCtx === "obj") {
+    canvasTemp = renderCanvas;
+    ctxTemp = renderCtx;
   } else {
-    console.error("Unknown image context: ", currentCtx);
-    return;
+    console.error("Error in onFaceDetectionResults: ", error);
   }
+  console.log(results);
 
   if (results.detections) {
     const faceBox = results.detections[0].boundingBox;
-    const croppedFace = cropFace(faceBox, canvas, ctx);
+    const croppedFace = cropFace(faceBox, canvasTemp, ctxTemp);
 
     storedImage = croppedFace;
 
@@ -91,7 +110,7 @@ function onFaceDetectionResults(results) {
   }
 }
 
-function cropFace(faceBox, canvas, ctx, offset = 0.3) {
+async function cropFace(faceBox, canvas, ctx, offset = 0.3) {
   const sourceWidth = canvas.width;
   const sourceHeight = canvas.height;
   let x = (faceBox.xCenter - faceBox.width / 2) * sourceWidth;
@@ -131,6 +150,7 @@ function onResults(results) {
     if (isImageCanvas) {
       canvasCtx = imgCtx;
       landmarks1 = results.multiFaceLandmarks[0];
+      console.log(landmarks1);
     } else {
       console.log("Doing render context");
       canvasCtx = renderCtx;
@@ -188,54 +208,28 @@ function onResults(results) {
   }
 }
 
-function processImage(file, callback) {
-  // Convert the image file to a buffer for sharp processing
-  const reader = new FileReader();
+async function processImage(imageDataUrl, callback) {
+  const faceDetection = await initializeFaceDetection();
+  const rotatedImage = new Image();
+  rotatedImage.src = imageDataUrl;
 
-  reader.onloadend = function () {
-    const arrayBuffer = reader.result;
+  rotatedImage.onload = function () {
+    imgCtx.clearRect(0, 0, imgCanvas.width, imgCanvas.height);
+    imgCtx.drawImage(rotatedImage, 0, 0, imgCanvas.width, imgCanvas.height);
 
-    // Use the exposed function to rotate the image
-    window.imageProcessing
-      .rotateImage(arrayBuffer)
-      .then((rotatedBuffer) => {
-        // Create a new Blob from the rotated buffer
-        const blob = new Blob([rotatedBuffer], { type: "image/jpeg" });
-        const rotatedImageURL = URL.createObjectURL(blob);
-
-        const rotatedImage = new Image();
-        rotatedImage.src = rotatedImageURL;
-
-        rotatedImage.onload = function () {
-          // Draw the rotated image onto the canvas
-          imgCtx.clearRect(0, 0, imgCanvas.width, imgCanvas.height);
-          imgCtx.drawImage(
-            rotatedImage,
-            0,
-            0,
-            imgCanvas.width,
-            imgCanvas.height
-          );
-
-          try {
-            // Now send the rotated image for face detection
-            faceDetection.send({ image: rotatedImage }).then((results) => {
-              callback(results); // Make sure to pass the results back to the callback
-            });
-          } catch (error) {
-            console.error("Error from faceDetection.send: ", error);
-            callback(null, error); // Pass the error to the callback
-          }
-        };
-      })
-      .catch((error) => {
-        console.error("Error rotating image:", error);
-        callback(null, error); // Pass the error to the callback if rotation fails
+    try {
+      faceDetection.send({ image: rotatedImage }).then((results) => {
+        callback(results);
       });
+    } catch (error) {
+      console.error("Error from faceDetection.send: ", error);
+      callback(null, error);
+    }
   };
-
-  // Read the file as an ArrayBuffer
-  reader.readAsArrayBuffer(file);
+  rotatedImage.onerror = function (error) {
+    console.error("Error loading image:", error);
+    callback(null, error);
+  };
 }
 
 async function canvasToImage(canvas) {
@@ -246,6 +240,8 @@ async function canvasToImage(canvas) {
 }
 
 async function renderFrontalImage() {
+  const faceDetection = await initializeFaceDetection();
+  currentCtx = "obj";
   try {
     renderer.render(scene, camera);
 
@@ -272,7 +268,6 @@ async function renderFrontalImage() {
 function compareLandmarks() {
   let total = 0;
   let num_landmarks;
-  let detailedMessage = "";
 
   if (!landmarks1 || !landmarks2) {
     return;
@@ -292,15 +287,9 @@ function compareLandmarks() {
         Math.pow(x2_pixel - x1_pixel, 2) + Math.pow(y2_pixel - y1_pixel, 2)
       );
       total += distance;
-      detailedMessage += `Distance for landmark ${i}: ${distance.toFixed(2)}\n`;
     }
-    const average = total / num_landmarks;
-    const message = `
-    Number of Landmarks: ${num_landmarks}
-    Average Distance: ${average.toFixed(2)} pixels
-    `;
-    document.querySelector(".result").innerText = message;
-    document.getElementById("detailed_results").innerText = detailedMessage;
+    const average = (total / num_landmarks).toFixed(2);
+    return average;
   }
 }
 
@@ -308,11 +297,7 @@ function resetFaceMesh() {
   if (faceMesh) {
     faceMesh.close();
   }
-  faceMesh = new FaceMesh({
-    locateFile: (file) => {
-      return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
-    },
-  });
+  faceMesh = new FaceMesh();
 
   faceMesh.setOptions({
     maxNumFaces: 1,
@@ -324,48 +309,30 @@ function resetFaceMesh() {
   faceMesh.onResults(onResults);
 }
 
-resetFaceMesh();
+async function main(imageDataUrl, objDataUrl) {
+  currentCtx = "image";
+  processImage(imageDataUrl, () => {});
 
-document.addEventListener("DOMContentLoaded", function () {
-  document.getElementById("imageInput").addEventListener("change", function () {
-    isImageCanvas = true;
-    currentCtx = "REAL";
-    processImage(this.files[0], () => {});
-  });
-
-  document.getElementById("objInput").addEventListener("change", function () {
-    resetFaceMesh();
-    console.log("Obj canvas triggered");
-    isImageCanvas = false;
-    currentCtx = "RENDERED";
-    const file = this.files[0];
-    const reader = new FileReader();
-
-    reader.onload = function (event) {
-      loader.load(event.target.result, function (object) {
-        object.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            const geometry = child.geometry;
-            geometry.computeBoundingBox();
-            const centroid = new THREE.Vector3();
-            geometry.boundingBox.getCenter(centroid);
-            geometry.translate(-centroid.x, -centroid.y, -centroid.z);
-          }
-        });
-        scene.add(object);
-        renderFrontalImage();
+  const loader = new THREE.OBJLoader();
+  const object = await new Promise((resolve, reject) => {
+    loader.load(objDataUrl, (object) => {
+      object.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          const geometry = child.geometry;
+          geometry.computeBoundingBox();
+          const centroid = new THREE.Vector3();
+          geometry.boundingBox.getCenter(centroid);
+          geometry.translate(-centroid.x, -centroid.y, -centroid.z);
+        }
       });
-    };
-    reader.readAsDataURL(file);
+      resolve(object);
+    });
   });
+  scene.add(object);
+  renderFrontalImage();
 
-  document.querySelector(".collapsible").addEventListener("click", function () {
-    this.classList.toggle("active");
-    let content = this.nextElementSibling;
-    if (content.style.maxHeight) {
-      content.style.maxHeight = null;
-    } else {
-      content.style.maxHeight = content.scrollHeight + "px";
-    }
-  });
-});
+  const result = compareLandmarks();
+  return result;
+}
+
+window.main = main;
