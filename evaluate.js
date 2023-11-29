@@ -41,19 +41,61 @@ async function calculateLandmarkDistances(imageUrl, objUrl) {
     const browser = await puppeteer.launch({
       headless: false,
     });
-    const page = await browser.newPage();
+    // const page = await browser.newPage();
+    const page = await browser.pages().then((pages) => pages[0]);
 
-    await page.addScriptTag({
-      url: "https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/face_detection.min.js",
+    // await page.addScriptTag({
+    //   url: "https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.min.js",
+    // });
+    // await page.addScriptTag({
+    //   url: "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.min.js",
+    // });
+    // await page.addScriptTag({
+    //   url: "https://cdnjs.cloudflare.com/ajax/libs/three.js/87/three.min.js",
+    // });
+    // await page.addScriptTag({
+    //   url: "https://cdn.rawgit.com/mrdoob/three.js/r87/examples/js/loaders/OBJLoader.js",
+    // });
+
+    await page.evaluate(() => {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.onload = resolve;
+        script.onerror = reject;
+        script.src =
+          "https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.min.js";
+        document.head.appendChild(script);
+      });
     });
-    await page.addScriptTag({
-      url: "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.min.js",
+    await page.evaluate(() => {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.onload = resolve;
+        script.onerror = reject;
+        script.src =
+          "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.min.js";
+        document.head.appendChild(script);
+      });
     });
-    await page.addScriptTag({
-      url: "https://cdnjs.cloudflare.com/ajax/libs/three.js/87/three.min.js",
+    await page.evaluate(() => {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.onload = resolve;
+        script.onerror = reject;
+        script.src =
+          "https://cdnjs.cloudflare.com/ajax/libs/three.js/87/three.min.js";
+        document.head.appendChild(script);
+      });
     });
-    await page.addScriptTag({
-      url: "https://cdn.rawgit.com/mrdoob/three.js/r87/examples/js/loaders/OBJLoader.js",
+    await page.evaluate(() => {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.onload = resolve;
+        script.onerror = reject;
+        script.src =
+          "https://cdn.rawgit.com/mrdoob/three.js/r87/examples/js/loaders/OBJLoader.js";
+        document.head.appendChild(script);
+      });
     });
 
     const scriptContent = fs.readFileSync(path.join(__dirname, "process.js"), {

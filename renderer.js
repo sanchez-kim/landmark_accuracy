@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OBJLoader } from "OBJLoader";
+import { degToRad } from "MathUtils";
 
 const scene = new THREE.Scene();
 const canvas = document.getElementById("webgl_canvas");
@@ -15,14 +16,17 @@ const camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
 camera.position.set(0, 0, 18);
 camera.fov = 5;
 camera.updateProjectionMatrix();
+// let camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 1000);
+// camera.position.set(0, 0, 5);
+// camera.updateProjectionMatrix();
 
 // lighting options
-const light = new THREE.DirectionalLight(0xffffff, 1.0);
+const light = new THREE.DirectionalLight(0xffffff, 2.0);
 light.position.set(0, 0, 1);
 scene.add(light);
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.05);
-scene.add(ambientLight);
+// const ambientLight = new THREE.AmbientLight(0xffffff, 0.05);
+// scene.add(ambientLight);
 
 window.addEventListener("resize", function () {
   const newAspectRatio = canvas.width / canvas.height;
@@ -338,6 +342,10 @@ document.addEventListener("DOMContentLoaded", function () {
     console.log("Obj canvas triggered");
     isImageCanvas = false;
     currentCtx = "RENDERED";
+
+    const textureLoader = new THREE.TextureLoader();
+    const baseTexture = textureLoader.load("assets/M05.png");
+
     const file = this.files[0];
     const reader = new FileReader();
 
@@ -345,12 +353,18 @@ document.addEventListener("DOMContentLoaded", function () {
       loader.load(event.target.result, function (object) {
         object.traverse((child) => {
           if (child instanceof THREE.Mesh) {
+            // child.material = new THREE.MeshStandardMaterial({
+            //   map: baseTexture,
+            // });
+
             const geometry = child.geometry;
             geometry.computeBoundingBox();
             const centroid = new THREE.Vector3();
             geometry.boundingBox.getCenter(centroid);
             geometry.translate(-centroid.x, -centroid.y, -centroid.z);
           }
+          // rotation option
+          object.rotation.set(degToRad(8), degToRad(-3), 0);
         });
         scene.add(object);
         renderFrontalImage();

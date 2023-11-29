@@ -3,10 +3,10 @@ const scene = new THREE.Scene();
 
 // set canvas
 const canvas = document.createElement("canvas");
-document.body.appendChild(canvas);
 canvas.width = 500;
 canvas.height = 500;
 const aspectRatio = canvas.width / canvas.height;
+document.body.appendChild(canvas);
 
 // renderer
 const renderer = new THREE.WebGLRenderer({
@@ -16,15 +16,22 @@ renderer.setSize(canvas.width, canvas.height);
 renderer.setClearColor(0xffffff);
 
 // camera info
-const camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
-camera.position.set(0, 0, 18);
-camera.fov = 6;
+// const camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
+// camera.position.set(0, 0, 18);
+// camera.fov = 6;
+// camera.updateProjectionMatrix();
+let camera = new THREE.OrthographicCamera(-2, 2, 2, -2, 1, 1000);
+camera.position.set(0, 0.2, 5);
+camera.zoom = 1.5;
 camera.updateProjectionMatrix();
 
 // lighting options
 const light = new THREE.DirectionalLight(0xffffff, 1.0);
-light.position.set(1, 1, 1).normalize();
+light.position.set(0, 0, 1);
 scene.add(light);
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.05);
+scene.add(ambientLight);
 
 let faceMesh;
 let landmarks1 = null;
@@ -49,7 +56,7 @@ const renderCtx = renderCanvas.getContext("2d");
 async function initializeFaceDetection() {
   const faceDetection = new FaceDetection({
     locateFile: (file) => {
-      return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/${file}`;
+      return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`;
     },
   });
 
@@ -67,7 +74,7 @@ async function initializeFaceDetection() {
 // set up face mesh
 faceMesh = new FaceMesh({
   locateFile: (file) => {
-    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`;
+    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
   },
 });
 

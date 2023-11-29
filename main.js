@@ -32,6 +32,7 @@ app.whenReady().then(() => {
   mainWindow = new BrowserWindow({
     width: 1600,
     height: 1000,
+    icon: path.join(__dirname, "assets/Insighter.ico"),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
