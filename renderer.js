@@ -12,10 +12,6 @@ renderer.setSize(canvas.width, canvas.height);
 renderer.setClearColor(0xffffff);
 
 // camera info
-// const camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
-// camera.position.set(0, 0, 18);
-// camera.fov = 5;
-// camera.updateProjectionMatrix();
 let size = 0.4;
 let camera = new THREE.OrthographicCamera(-size, size, size, -size, 1, 1000);
 camera.position.set(0, 0, 5);
@@ -26,9 +22,6 @@ camera.updateProjectionMatrix();
 const light = new THREE.DirectionalLight(0xffffff, 2.0);
 light.position.set(0, 0, 1);
 scene.add(light);
-
-// const ambientLight = new THREE.AmbientLight(0xffffff, 0.05);
-// scene.add(ambientLight);
 
 window.addEventListener("resize", function () {
   const newAspectRatio = canvas.width / canvas.height;
@@ -256,6 +249,7 @@ async function renderFrontalImage() {
     renderer.render(scene, camera);
 
     renderCtx.clearRect(0, 0, renderCanvas.width, renderCanvas.height);
+
     const image = await canvasToImage(renderer.domElement);
     renderCtx.drawImage(image, 0, 0, renderCanvas.width, renderCanvas.height);
 
@@ -330,6 +324,16 @@ function resetFaceMesh() {
   faceMesh.onResults(onResults);
 }
 
+function clearScene() {
+  for (let i = scene.children.length - 1; i >= 0; i--) {
+      const obj = scene.children[i];
+      if (!(obj instanceof THREE.Light)) {
+          scene.remove(obj);
+      }
+  }
+}
+
+
 resetFaceMesh();
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -340,6 +344,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   document.getElementById("objInput").addEventListener("change", function () {
+    clearScene();
     resetFaceMesh();
     console.log("Obj canvas triggered");
     isImageCanvas = false;
@@ -349,6 +354,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const baseTexture = textureLoader.load("assets/M05.png");
 
     const file = this.files[0];
+    const filename = file.name;
+
     const reader = new FileReader();
 
     reader.onload = function (event) {
@@ -366,7 +373,19 @@ document.addEventListener("DOMContentLoaded", function () {
             geometry.translate(-centroid.x, -centroid.y, -centroid.z);
           }
           // rotation option
-          // object.rotation.set(degToRad(8), degToRad(-3), 0);
+          if (filename.includes("M04")){
+            object.rotation.set(degToRad(-7), degToRad(-4), 0);
+          } else if (filename.includes("M05")) {
+            object.rotation.set(degToRad(6), degToRad(-2), 0);
+          } else if(filename.includes("M01")) {
+            object.rotation.set(degToRad(4), degToRad(-2), 0.05);
+          }
+          else {
+            object.rotation.set(degToRad(5), degToRad(-1), 0);
+          }
+          
+
+
         });
         scene.add(object);
         renderFrontalImage();
