@@ -366,7 +366,7 @@ document.addEventListener("DOMContentLoaded", function () {
             geometry.translate(-centroid.x, -centroid.y, -centroid.z);
           }
           // rotation option
-          object.rotation.set(degToRad(8), degToRad(-3), 0);
+          // object.rotation.set(degToRad(8), degToRad(-3), 0);
         });
         scene.add(object);
         renderFrontalImage();
