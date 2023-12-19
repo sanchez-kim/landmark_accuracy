@@ -12,13 +12,15 @@ renderer.setSize(canvas.width, canvas.height);
 renderer.setClearColor(0xffffff);
 
 // camera info
-const camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
-camera.position.set(0, 0, 18);
-camera.fov = 5;
-camera.updateProjectionMatrix();
-// let camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 1000);
-// camera.position.set(0, 0, 5);
+// const camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
+// camera.position.set(0, 0, 18);
+// camera.fov = 5;
 // camera.updateProjectionMatrix();
+let size = 0.4;
+let camera = new THREE.OrthographicCamera(-size, size, size, -size, 1, 1000);
+camera.position.set(0, 0, 5);
+camera.updateProjectionMatrix();
+
 
 // lighting options
 const light = new THREE.DirectionalLight(0xffffff, 2.0);
