@@ -121,10 +121,8 @@ async function calculateLandmarkDistances(imageUrl, objUrl) {
 }
 
 // Example usage
-const IMAGE_URL =
-  "https://ins-ai-speech.s3.ap-northeast-2.amazonaws.com/prod/v2/M06/S2501/F001/M06_S2501_F001.png";
-const OBJ_URL =
-  "https://ins-ai-speech.s3.ap-northeast-2.amazonaws.com/prod/v2/M06/S2501/F001/M06_S2501_F001.obj";
+const IMAGE_URL = process.env.IMAGE_URL;
+const OBJ_URL = process.env.OBJ_URL;
 
 calculateLandmarkDistances(IMAGE_URL, OBJ_URL).then((results) => {
   console.log("Landmark distances:", results);

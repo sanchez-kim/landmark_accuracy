@@ -1,8 +1,7 @@
 const axios = require("axios");
 const { logger } = require("./logger");
 
-const BASE_URL =
-  "https://ins-ai-speech.s3.ap-northeast-2.amazonaws.com/prod/v2/M06";
+const BASE_URL = process.env.BASE_URL;
 const SENTENCE_START = 2501;
 const SENTENCE_END = 3000;
 const MAX_FRAME_NUMBER = 999;
